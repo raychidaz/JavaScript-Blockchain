@@ -1,5 +1,6 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 import Blockchain from './blockchain.js';
 
@@ -50,6 +51,49 @@ app.get('/mine', (req, res) => {
     block: newBlock,
   });
 });
+
+// register a new node to own server  and broadcast it to the rest of the network
+app.post('/register-and-broadcast-node', (req, res) => {
+  const newNodeUrl = req.body.newNodeUrl;
+  if (bitcoin.networkNodes.indexOf(newNodeUrl) === -1) {
+    bitcoin.networkNodes.push(newNodeUrl);
+  }
+
+  const regNodesPromises = [];
+
+  bitcoin.networkNodes.forEach((networkNodeUrl) => {
+    // register-node
+    const requestOptions = {
+      method: 'post',
+      url: networkNodeUrl + '/register-node',
+      data: { newNodeUrl: newNodeUrl },
+      json: true,
+    };
+
+    regNodesPromises.push(axios(requestOptions));
+  });
+  Promise.all(regNodesPromises)
+    .then((data) => {
+      // use the data....
+      const bulkRegisterOptions = {
+        method: 'post',
+        url: newNodeUrl + '/register-nodes-bulk',
+        data: {
+          allNetworkNodes: [...bitcoin.networkNodes, bitcoin.currentNodeUrl],
+        },
+        json: true,
+      };
+      return axios(bulkRegisterOptions);
+    })
+    .then((data) => {
+      res.json({ note: 'New node registered with network successfully' });
+    });
+});
+
+// register/accept a new node to the  network
+app.post('/register-node', (req, res) => {});
+
+app.post('/register-nodes-bulk', (req, res) => {});
 
 app.listen(PORT, (err) => {
   if (err) {
