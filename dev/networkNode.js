@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Blockchain from './blockchain.js';
 
 const app = express();
-const PORT = process.env.port || 3000;
+const PORT = process.argv[2];
 const bitcoin = new Blockchain();
 const nodeAddress = uuidv4().split('-').join('');
 
