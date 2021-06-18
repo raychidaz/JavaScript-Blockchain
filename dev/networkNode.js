@@ -53,14 +53,16 @@ app.get('/mine', (req, res) => {
 });
 
 // register a new node to own server  and broadcast it to the rest of the network
+// creates decentralised blockchain network
 app.post('/register-and-broadcast-node', (req, res) => {
   const newNodeUrl = req.body.newNodeUrl;
-  if (bitcoin.networkNodes.indexOf(newNodeUrl) === -1) {
+  if (bitcoin.networkNodes.indexOf(newNodeUrl) == -1) {
     bitcoin.networkNodes.push(newNodeUrl);
   }
 
   const regNodesPromises = [];
 
+  //broadcast the node to the entire network...
   bitcoin.networkNodes.forEach((networkNodeUrl) => {
     // register-node
     const requestOptions = {
@@ -74,7 +76,7 @@ app.post('/register-and-broadcast-node', (req, res) => {
   });
   Promise.all(regNodesPromises)
     .then((data) => {
-      // use the data....
+      // registering all current nodes with new node....
       const bulkRegisterOptions = {
         method: 'post',
         url: newNodeUrl + '/register-nodes-bulk',
@@ -91,9 +93,28 @@ app.post('/register-and-broadcast-node', (req, res) => {
 });
 
 // register/accept a new node to the  network
-app.post('/register-node', (req, res) => {});
+app.post('/register-node', (req, res) => {
+  const newNodeUrl = req.body.newNodeUrl;
+  const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
+  const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
+  if (nodeNotAlreadyPresent && notCurrentNode)
+    bitcoin.networkNodes.push(newNodeUrl);
 
-app.post('/register-nodes-bulk', (req, res) => {});
+  res.json({ note: 'New node registered successfully.' });
+});
+
+// register all current nodes with the new node at once
+app.post('/register-nodes-bulk', (req, res) => {
+  const allNetworkNodes = req.body.allNetworkNodes;
+  allNetworkNodes.forEach((networkNodeUrl) => {
+    const nodeNotAlreadyPresent =
+      bitcoin.networkNodes.indexOf(networkNodeUrl) == -1;
+    const notCurrentNode = bitcoin.currentNodeUrl !== networkNodeUrl;
+    if (nodeNotAlreadyPresent && notCurrentNode)
+      bitcoin.networkNodes.push(networkNodeUrl);
+  });
+  res.json({ note: 'Bulk registration successful' });
+});
 
 app.listen(PORT, (err) => {
   if (err) {

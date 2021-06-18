@@ -1,12 +1,11 @@
 import { createHmac } from 'crypto';
-
-const currentNodeUrl = process.argv[3];
+import { argv } from 'process';
 
 function Blockchain() {
   this.chain = [];
   this.pendingTransactions = [];
 
-  this.currentNodeUrl = currentNodeUrl;
+  this.currentNodeUrl = argv[3];
   this.networkNodes = [];
 
   //Genesis Block
