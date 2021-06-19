@@ -27,6 +27,30 @@ app.post('/transaction', (req, res) => {
   res.json({ note: `Transaction will be addded to block ${blockIndex}.` });
 });
 
+// 1. creates a new transaction
+//2. broadcasts new transaction to all the other nodes in the network
+app.post('/transaction/broadcast', (req, res) => {
+  // create transaction
+  const { body, sender, recipient } = req.body;
+  const newTransaction = bitcoin.createNewTransaction(body, sender, recipient);
+  bitcoin.addTransactionToPendingTransactions(newTransaction);
+
+  const requestPromises = [];
+  // broadcast
+  bitcoin.networkNodes.forEach((networkNodeUrl) => {
+    const requestOptions = {
+      method: 'post',
+      url: networkNodeUrl + '/transaction',
+      data: newTransaction,
+      json: true,
+    };
+    requestPromises.push(axios(requestOptions));
+  });
+  Promise.all(requestPromises).then((data) => {
+    res.json({ note: 'Transaction created and broadcast successfully' });
+  });
+});
+
 //  mine/create new block
 app.get('/mine', (req, res) => {
   const lastBlock = bitcoin.getLastBlock();
