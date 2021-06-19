@@ -1,5 +1,6 @@
 import { createHmac } from 'crypto';
 import { argv } from 'process';
+import { v4 as uuidv4 } from 'uuid';
 
 function Blockchain() {
   this.chain = [];
@@ -45,10 +46,16 @@ Blockchain.prototype.createNewTransaction = function (
     amount: amount,
     sender: sender,
     recipient: recipient,
+    transactionId: uuidv4().split('-').join(''),
   };
 
-  this.pendingTransactions.push(newTransaction);
+  return newTransaction;
+};
 
+Blockchain.prototype.addTransactionToPendingTransactions = function (
+  transactionObj,
+) {
+  this.pendingTransactions.push(transactionObj);
   return this.getLastBlock()['index'] + 1;
 };
 
