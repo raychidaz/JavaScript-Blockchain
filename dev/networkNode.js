@@ -19,12 +19,10 @@ app.get('/blockchain', (req, res) => {
 
 // create new transaction
 app.post('/transaction', (req, res) => {
-  const blockIndex = bitcoin.createNewTransaction(
-    req.body.amount,
-    req.body.sender,
-    req.body.recipient,
-  );
-  res.json({ note: `Transaction will be addded to block ${blockIndex}.` });
+  const newTransaction = req.body;
+  const blockIndex =
+    bitcoin.addTransactionToPendingTransactions(newTransaction);
+  res.json({ note: `Transaction will be added to blockL ${blockIndex}` });
 });
 
 // 1. creates a new transaction
@@ -76,8 +74,8 @@ app.get('/mine', (req, res) => {
   });
 });
 
-// register a new node to own server  and broadcast it to the rest of the network
-// creates decentralised blockchain network
+// 1. register a new node to own server  and broadcast it to the rest of the network
+// 2. creates decentralised blockchain network
 app.post('/register-and-broadcast-node', (req, res) => {
   const newNodeUrl = req.body.newNodeUrl;
   if (bitcoin.networkNodes.indexOf(newNodeUrl) == -1) {
