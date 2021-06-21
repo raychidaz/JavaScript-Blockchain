@@ -29,8 +29,12 @@ app.post('/transaction', (req, res) => {
 //2. broadcasts new transaction to all the other nodes in the network
 app.post('/transaction/broadcast', (req, res) => {
   // create transaction
-  const { body, sender, recipient } = req.body;
-  const newTransaction = bitcoin.createNewTransaction(body, sender, recipient);
+  const { amount, sender, recipient } = req.body;
+  const newTransaction = bitcoin.createNewTransaction(
+    amount,
+    sender,
+    recipient,
+  );
   bitcoin.addTransactionToPendingTransactions(newTransaction);
 
   const requestPromises = [];
@@ -65,13 +69,64 @@ app.get('/mine', (req, res) => {
     nonce,
   );
 
-  bitcoin.createNewTransaction(12.5, '00', nodeAddress);
-
   const newBlock = bitcoin.createNewBlock(nonce, previousBlockHash, blockHash);
-  res.json({
-    note: 'New Block mined successfully',
-    block: newBlock,
+
+  // broadcast to  other nework nodes
+  const requestPromises = [];
+  bitcoin.networkNodes.forEach((networkNodeUrl) => {
+    const requestOptions = {
+      method: 'post',
+      url: networkNodeUrl + '/receive-new-block',
+      data: { newBlock: newBlock },
+      json: true,
+    };
+    requestPromises.push(axios(requestOptions));
   });
+
+  Promise.all(requestPromises)
+    .then((data) => {
+      // broadcast mining reward request to entire network
+      const requestOptions = {
+        method: 'post',
+        url: bitcoin.currentNodeUrl + '/transaction/broadcast',
+        data: {
+          amount: 12.5,
+          sender: '00',
+          recipient: nodeAddress,
+        },
+        json: true,
+      };
+      return axios(requestOptions);
+    })
+    .then((data) => {
+      res.json({
+        note: 'New Block mined and broadcast successfully',
+        block: newBlock,
+      });
+    });
+});
+
+// accept new block onto the chain
+app.post('/receive-new-block', (req, res) => {
+  const newBlock = req.body.newBlock;
+  const lastBlock = bitcoin.getLastBlock();
+  const correctHash = lastBlock.hash === newBlock.previousBlockHash;
+  const correctIndex = lastBlock['index'] + 1 === newBlock['index'];
+
+  if (correctHash && correctIndex) {
+    bitcoin.chain.push(newBlock);
+    // clear  out pending transactions cos they  are now in this current mined block
+    bitcoin.pendingTransactions = [];
+    res.json({
+      note: 'New block  received and accepted',
+      newBlock: newBlock,
+    });
+  } else {
+    res.json({
+      note: 'New  Block rejected',
+      newBlock: newBlock,
+    });
+  }
 });
 
 // 1. register a new node to own server  and broadcast it to the rest of the network
